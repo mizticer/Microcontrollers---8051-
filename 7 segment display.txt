@@ -1,0 +1,54 @@
+ORG 0000h
+ljmp start
+ORG 000Bh
+ljmp przerwanie
+
+ORG 0100h
+start:	
+	MOV DPH,#02H
+	MOV P1,#00000000B
+	MOV TMOD,#01h
+	MOV TH0, #0FCh
+	MOV TL0, #018h
+	SETB TR0
+	SETB ET0
+	SETB EA
+	SETB F0
+	mov R0,#9D
+	mov DPL,#01H
+	mov P1,#00111111b
+	
+loop:
+JNB P3.3,ZERUJ		;LINIJKI ZAPEWNIAJACE RESET
+ljmp loop
+ZERUJ:	mov DPL,#00H
+	mov R0,#10d
+LJMP loop
+
+przerwanie:
+	MOV TH0, #0FCh
+	MOV TL0, #018h	
+	JNB P3.2,stoper  ;ponizsze instrucje w tej sekcji odpowiadają za stop start stopera.
+	ljmp niewlacz
+stoper:
+	lcall cyfra
+niewlacz:
+
+RETI
+
+cyfra:	
+   MOVC A,@A+DPTR
+   MOV P1,A
+   CLR A
+   INC DPL
+   DEC R0 
+   CJNE R0,#00H,BBB ;Jeśli R0!=0 to skok do BBB a jeśli R0==0 to wykonuje dwie instrukcje poniżej CJNE
+   MOV DPL,#00H
+   MOV R0,#10D
+   BBB:
+RET
+
+ORG 0200H
+DB 00111111b,006H,05Bh,04Fh,066h,06Dh,07Dh,007h,07Fh,06Fh  ;ZAŁADOWANIE DO PAMIECI PROGRAMU SYNGALOW DLA LICZB
+
+END
