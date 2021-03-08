@@ -1,0 +1,102 @@
+ORG 0000h
+ljmp start
+
+ORG 100H
+start:			;TUTAJ ZAPISUJEMY LICZBY NA KTÓRYCH BEDZIEMY WYKONYWAC OPERACJE ARYTMETYCZNE
+	mov 40h,#022h	;STARSZA CZESC
+	mov 41h,#032h	;MLODSZA CZESC
+	mov 48h,#012h	;STARSZA CZESC
+	mov 49h,#032h	;MLODSZA CZESC
+	mov R7,41h
+	mov R5,49h
+	mov R6,40h	;ZALADOWANIE REJESTROW
+	mov R4,48h
+	mov A, #00h
+	lcall dodawanie
+	lcall odejmowanie
+	lcall mnozenie
+ORG 0250h
+dodawanie:
+
+    	MOV A,R7      ;Dodawanie mlodszych czesci i załadowanie wyniku do pamieci o adresie 52
+    	ADD A,R5      
+    	MOV 52h,A     
+    	MOV A,R6      ;Dodawanie starszych czesci,bitu przeniesienia i załadowanie wyniku do adresu 51(dodawanie z przeniesieniem)
+    	ADDC A,R4    
+    	MOV 51h,A    
+    	MOV A,#00h   ;zerowanie
+    	ADDC A,#00h  ;dodanie bitu przeniesienia
+    	MOV 50h,A    ;bit przeniesienia na adres 50h
+	RET
+
+ORG 0350H
+odejmowanie:
+
+    	mov R7,41h	;załadowanie wartosci na których odbedzie sie odejmowanie
+	mov R5,49h
+	mov R6,40h
+	mov R4,48h
+	mov A, #00h
+  	MOV A,R7   
+  	CLR C      ;zerowanie bitu przeniesienia
+  	SUBB A,R5  ; Odejmowanie mlodszych czesci
+  	MOV 59h,A  ;zaladowanie wyniu w 59h
+  	MOV A,R6   
+  	SUBB A,R4  ;odejmowanie starszych czesci
+  	MOV 58h,A  
+  	jc zeruj ;jesli liczba ujemna to skocz do zeruj i wynik jest równy 0,
+  	RET
+zeruj:
+ 	MOV 59h,#00d
+ 	MOV 58h,#00d
+ 	RET
+ 
+ORG 0450H
+mnozenie:
+	mov R7,41h	;zaladowanie do rejestrow
+	mov R5,49h
+	mov R6,40h
+	mov R4,48h
+	MOV A,R5 	;przeniesienie rejestrow które beda mnozone do akumulatorow
+	MOV B,R7 
+ 	MUL AB   
+	MOV R2,B 	;zaladowanie wynikow do r2 i r3
+ 	MOV R3,A 
+ 	MOV A,R5    	;przeniesienie rejestrow które beda mnozone do akumulatorow
+ 	MOV B,R6    
+ 	MUL AB      
+ 	ADD A,R2    	;dodanie wyniku z poprzedniego mnozenia
+ 	MOV R2,A    
+ 	MOV A,B     
+ 	ADDC A,#00h 	;dodanie bitu przeniesienia
+ 	MOV R1,A    
+ 	MOV A,#00h  
+ 	ADDC A,#00h 	;dodanie bitu przeniesienia
+ 	MOV R0,A    
+ 	MOV A,R4   	;przeniesienie rejestrow które beda mnozone do akumulatorow
+ 	MOV B,R7   
+ 	MUL AB     
+ 	ADD A,R2   	;dodanie wyniku z poprzedniego mnozenia
+ 	MOV R2,A   
+ 	MOV A,B    
+ 	ADDC A,R1  
+ 	MOV R1,A   
+ 	MOV A,#00h 
+ 	ADDC A,R0  	;dodanie bitu przeniesienia
+ 	MOV R0,A   
+	MOV A,R4  	;przeniesienie rejestrow które beda mnozone do akumulatorow
+ 	MOV B,R6  
+ 	MUL AB    
+ 	ADD A,R1  	
+ 	MOV R1,A  	;dodanie wyniku z poprzedniego mnozenia
+ 	MOV A,B   
+ 	ADDC A,R0 	;bit przeniesienia  na poczatek wyniku
+ 	MOV R0,A  
+			;zaladowanie wyniku do pamieci
+ 	mov 63h,R3
+ 	mov 62h,R2
+ 	mov 61h,R1
+ 	mov 60h,R0
+
+RET
+END
