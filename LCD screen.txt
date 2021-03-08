@@ -1,0 +1,114 @@
+;program przesyla dane umieszczone pod adresem 70h w pamiecie wewnetrznej danych
+;presylanie odbywa sie w trybie 4 bitowym
+	RS 	EQU 	P3.7	;0- instrukcje 	1- dane
+	RW 	EQU 	P3.6	;0- zapis	1-odczyt
+	E 	EQU 	P3.5	;odczyt danych nastepuje na zboczu opadajacym pojawiajacym sie na wejsiu E
+	DANE 	EQU 	70h	;adres spod ktorego dane sa przesylane do wyswietlacza
+	X	EQU	71h	;adres wspolrzednej w osi X
+	Y	EQU	72h	;adres wspolrzednej w osi Y	
+
+	org 0000h
+	
+	ljmp 	start
+
+	org 0100h
+					;dane inicjalizacyjne wyswietlacz
+init_db: 	DB 01h, 02h, 06h, 0Eh, 02h, 80h, 00h
+	org 0150h
+text_to_write: DB 'Sterowanie mikroprocesorowe lab...'
+	org 0300H
+jeszcze_raz: 
+	mov r1,#16d			;ustawienia licznikow "wewnętrznych" w celu wypisania tekstu jeszcze raz
+	mov DPTR,#text_to_write		;ustawienie DPTR na 0150h
+	ljmp przeskocz
+start:	mov R1,#16d
+	mov 	DPTR,#init_db
+	clr 	RW
+	clr 	RS
+	setb 	E
+	mov 	P3,#00100010b
+	clr 	E
+	setb 	E
+init:	clr 	A
+	movc 	A,@A+DPTR
+	jz 	next
+	inc 	DPTR
+	mov 	dane, 	A
+	LCALL 	send_data
+	jmp 	init
+next:
+	mov DPTR,#text_to_write		;ustawienie DPTR na 0150h				
+	LCALL lcd_write	;		;początek wypisywwania tekstu na wyswietlaczu
+	LJMP petla
+;_____________________________________________________________				
+send_data:
+	push 	ACC
+	mov 	A, 	#0F0h
+	anl 	P3, 	A
+	anl 	A, 	dane
+	swap 	A
+	setb 	E
+	orl 	P3, 	A
+	clr 	E
+	mov 	A, 	#0F0h
+	anl 	P3, 	A
+	swap 	A
+	anl 	A, 	dane
+	setb 	E
+	orl 	P3, 	A
+	clr 	E
+	pop 	ACC
+	RET
+;_____________________________________________________________
+lcd_write:				;wypisywanie znaków(ASCI) na wyświetlaczu
+dalej:	CJNE R0,#70H,przeskocz		;przesok	
+	ljmp petla
+przeskocz:dec R1
+	setb 	RS
+	MOV A, #0h			
+	MOVC A,@A+DPTR
+	mov dane,A
+	lcall send_data
+	INC DPL
+	MOV R0,DPL			;Przekazanie wartosci DPL w celu sprawdzaniu warunku CJNE przeskok linia 63
+	CJNE R1,#0D,dalej		;Sprawdza czy moze pisac w drugim wierszu,jesli nie to skacze do dalej, jesli tak to ustawia kursor w drugiej linijce	
+	clr RS				;Ustawia kursor w drugiej lini
+	MOV dane, #028h
+	lcall send_data
+	setb RS
+	clr RS
+	MOV dane, #0C0h
+	lcall send_data
+	setb RS
+ 	ljmp dalej
+;_____________________________________________________________
+lcd_reset:				;Procedura lcd_reset czyści tekst na wyświetlaczu
+	clr RS
+	MOV dane, #01h
+	lcall send_data
+	setb RS
+	clr RS
+	MOV dane, #80h
+	lcall send_data
+	setb RS
+	RET
+;_____________________________________________________________
+lcd_home:				;Procedura lcd_home ustawia kursor w lewym górnym rogu
+	clr RS
+	MOV dane, #080h
+	lcall send_data
+	setb RS
+	RET
+;_____________________________________________________________	
+;Nieskonczona petla ktora umozliwia korzystanie z dostepnym procedur, jesli 50h=0 to czekanie,50h=1 czysci wyśw,50h=2 wypisuje tekst jeszcze raz,50h=3 ustawia kursor w pozycji home
+petla:	
+loop1: 
+	mov R2,50H
+	cjne R2,#1D,loop2
+	lcall lcd_reset
+loop2:  cjne R2,#2D,loop3
+	ljmp jeszcze_raz
+loop3:  cjne r2,#3d,loop1
+	lcall lcd_home
+	ljmp loop1
+	END
